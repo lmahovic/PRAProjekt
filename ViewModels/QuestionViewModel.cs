@@ -1,0 +1,18 @@
+using System.Collections.Generic;
+using PRA_WebAPI.Entities;
+
+namespace PRA_WebAPI.ViewModels;
+
+public class QuestionViewModel
+{
+    public QuestionViewModel()
+    {
+        Answers = new HashSet<AnswerViewModel>();
+    }
+
+    public int Id { get; set; }
+    public string QuestionText { get; set; }
+    public int TimeLimit { get; set; }
+    public byte QuestionOrder { get; set; }
+    public ICollection<AnswerViewModel> Answers { get; set; }
+}

@@ -1,0 +1,74 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using AutoMapper;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PRA_WebAPI.Context;
+using PRA_WebAPI.Entities;
+using PRA_WebAPI.ViewModels;
+
+namespace PRA_WebAPI.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class PlayersController : ControllerBase
+{
+    private readonly PRAQuizContext _context;
+    private readonly IMapper _mapper;
+
+    public PlayersController(PRAQuizContext context, IMapper mapper)
+    {
+        _context = context;
+        _mapper = mapper;
+    }
+
+    // GET: api/Players/5
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<Player>> GetPlayer(int id)
+    {
+        var player = await _context.Players.FindAsync(id);
+
+        if (player == null)
+        {
+            return NotFound();
+        }
+
+        return player;
+    }
+
+    // POST: api/Players
+    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    [HttpPost]
+    public async Task<ActionResult<PlayerViewModel>> PostPlayer([FromBody] PlayerViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+        var existingPlayersNicknames = await _context.Players
+            .Where(player => player.GameId == model.GameId)
+            .Select(player => player.Nickname.ToUpper())
+            .ToListAsync();
+
+        if (existingPlayersNicknames.Count == 0 || existingPlayersNicknames.Contains(model.Nickname.ToUpper()))
+        {
+            return BadRequest("Player with the selected nickname already exists!");
+        }
+
+        var player = _mapper.Map<Player>(model);
+        try
+        {
+            _context.Players.Add(player);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction("GetPlayer", new {id = player.Id}, _mapper.Map<PlayerViewModel>(player));
+        }
+        catch (Exception)
+        {
+            return BadRequest("Error writing to database");
+        }
+    }
+
+}
