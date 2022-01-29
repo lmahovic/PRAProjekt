@@ -13,6 +13,7 @@ namespace PRA_WebAPI.Entities
         public int Id { get; set; }
         public string Nickname { get; set; }
         public int GameId { get; set; }
+        public bool HasQuit { get; set; }
 
         public virtual Game Game { get; set; }
         public virtual ICollection<PlayerQuestionAnswer> PlayerQuestionAnswers { get; set; }

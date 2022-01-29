@@ -25,11 +25,13 @@ namespace PRA_WebAPI
         {
 
             services.AddCors(options => {
-                options.AddPolicy("Cors", builder =>
+                options.AddDefaultPolicy(builder =>
                 {
                     builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
                 });
             });
+            
+            
             services.AddControllers()
                 .AddJsonOptions(options => options.JsonSerializerOptions.ReferenceHandler=ReferenceHandler.IgnoreCycles);
 

@@ -27,17 +27,7 @@ public class PlayersController : ControllerBase
 
     // GET: api/Players/5
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<Player>> GetPlayer(int id)
-    {
-        var player = await _context.Players.FindAsync(id);
-
-        if (player == null)
-        {
-            return NotFound();
-        }
-
-        return player;
-    }
+    public async Task<ActionResult<Player>> GetPlayer(int id) => Ok(await _context.Players.FindAsync(id));
 
     // POST: api/Players
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
@@ -48,12 +38,13 @@ public class PlayersController : ControllerBase
         {
             return BadRequest(ModelState);
         }
+
         var existingPlayersNicknames = await _context.Players
             .Where(player => player.GameId == model.GameId)
             .Select(player => player.Nickname.ToUpper())
             .ToListAsync();
 
-        if (existingPlayersNicknames.Count == 0 || existingPlayersNicknames.Contains(model.Nickname.ToUpper()))
+        if (existingPlayersNicknames.Count != 0 && existingPlayersNicknames.Contains(model.Nickname.ToUpper()))
         {
             return BadRequest("Player with the selected nickname already exists!");
         }
@@ -70,5 +61,40 @@ public class PlayersController : ControllerBase
             return BadRequest("Error writing to database");
         }
     }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> PutPlayer(int id)
+    {
+        var player = await _context.Players
+            .FindAsync(id);
+
+        if (player == null)
+        {
+            return BadRequest("Player question not found");
+        }
+
+        player.HasQuit = true;
+        
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!PlayerExists(id))
+            {
+                return NotFound();
+            }
+        }
+        return Ok();
+    }
+    
+    private bool PlayerExists(int id)
+    {
+        return _context.Players.Any(e => e.Id == id);
+    }
+
+
+
 
 }

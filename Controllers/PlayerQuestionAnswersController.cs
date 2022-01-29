@@ -41,7 +41,7 @@ namespace PRA_WebAPI.Controllers
         // PUT: api/PlayerQuestionAnswers/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut]
-        public async Task<IActionResult> PutPlayerQuestionAnswer(int id, int answerId, double answerTime)
+        public async Task<IActionResult> PutPlayerQuestionAnswer(int id, int answerId, long answerTime)
         {
             var playerQuestionAnswer = await _context.PlayerQuestionAnswers
                 .FindAsync(id);
@@ -95,9 +95,10 @@ namespace PRA_WebAPI.Controllers
 
             return Ok();
         }
-        private static int CalculatePoints(Question question, double answerTime)
+        private static int CalculatePoints(Question question, long answerTime)
         {
-            return (int) (100 + 100 * (1 - answerTime / question.TimeLimit));
+            var answerTimeDouble = (double) answerTime;
+            return (int) (100 + 100 * (1 - answerTimeDouble / question.TimeLimit * 1000));
         }
 
         // // POST: api/PlayerQuestionAnswers

@@ -31,7 +31,7 @@ public class GamesController : ControllerBase
 
         if (game == null)
         {
-            return NotFound();
+            return BadRequest("Game pin not found!");
         }
 
         return Ok(_mapper.Map<GameViewModel>(game));

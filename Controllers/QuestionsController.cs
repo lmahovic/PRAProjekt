@@ -24,29 +24,37 @@ namespace PRA_WebAPI.Controllers
             _context = context;
             _mapper = mapper;
         }
-        
+
         // GET: api/Questions/5
         [HttpGet("{quizId:int}")]
-        public async Task<ActionResult<IEnumerable<QuestionViewModel>>> GetQuestion(int quizId)
+        public async Task<ActionResult<List<QuestionViewModel>>> GetQuestion(int quizId)
         {
-            Quiz quiz;
             try
             {
-                quiz = await _context.Quizzes
+                var quiz = await _context.Quizzes
                     .Include(q => q.Questions)
                     .ThenInclude(question => question.Answers)
                     .SingleAsync(q => q.Id == quizId);
+
+                var questionViewModels = _mapper.Map<List<QuestionViewModel>>(quiz.Questions);
+                
+                questionViewModels.Sort((x,y)=> x.QuestionOrder.CompareTo(y.QuestionOrder));
+                
+                foreach (var questionViewModel in questionViewModels)
+                {
+                    questionViewModel.Answers.Sort((x,y)=>x.AnswerOrder.CompareTo(y.AnswerOrder));
+                }
+                
+                return Ok(questionViewModels);
             }
             catch (Exception)
             {
                 return NotFound("Quiz not found!");
             }
 
-            return Ok(_mapper.Map<IEnumerable<QuestionViewModel>>(quiz.Questions));
         }
 
 
-        
     }
 
 }

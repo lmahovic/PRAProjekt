@@ -9,7 +9,7 @@ namespace PRA_WebAPI.Entities
         public int PlayerId { get; set; }
         public int QuestionId { get; set; }
         public int? AnswerId { get; set; }
-        public double? AnswerTime { get; set; }
+        public long? AnswerTime { get; set; }
         public int? Points { get; set; }
 
         public virtual Answer Answer { get; set; }
