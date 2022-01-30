@@ -86,7 +86,7 @@ public class PlayersController : ControllerBase
 
         if (player == null)
         {
-            return BadRequest("Player question not found");
+            return BadRequest("Player not found");
         }
 
         player.HasQuit = true;
@@ -104,6 +104,7 @@ public class PlayersController : ControllerBase
         }
         return Ok();
     }
+    
     
     private bool PlayerExists(int id)
     {

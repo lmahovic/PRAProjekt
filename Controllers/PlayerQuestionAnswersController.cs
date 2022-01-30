@@ -44,6 +44,7 @@ namespace PRA_WebAPI.Controllers
                 .AnyAsync(x =>
                     x.QuestionId == playerQuestionAnswer.QuestionId &&
                     x.Player.GameId == playerQuestionAnswer.Player.GameId &&
+                    x.Player.HasQuit== false &&
                     x.Points == null));
 
         }

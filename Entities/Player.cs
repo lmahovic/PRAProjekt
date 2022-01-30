@@ -16,6 +16,7 @@ namespace PRA_WebAPI.Entities
         public bool HasQuit { get; set; }
 
         public virtual Game Game { get; set; }
+        public virtual PlayerRanking PlayerRanking { get; set; }
         public virtual ICollection<PlayerQuestionAnswer> PlayerQuestionAnswers { get; set; }
     }
 }

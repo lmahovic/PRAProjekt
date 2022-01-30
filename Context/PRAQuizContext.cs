@@ -22,6 +22,7 @@ namespace PRA_WebAPI.Context
         public virtual DbSet<Game> Games { get; set; }
         public virtual DbSet<Player> Players { get; set; }
         public virtual DbSet<PlayerQuestionAnswer> PlayerQuestionAnswers { get; set; }
+        public virtual DbSet<PlayerRanking> PlayerRankings { get; set; }
         public virtual DbSet<Question> Questions { get; set; }
         public virtual DbSet<Quiz> Quizzes { get; set; }
 
@@ -141,6 +142,24 @@ namespace PRA_WebAPI.Context
                     .HasForeignKey(d => d.QuestionId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("PlayerQuestionAnswer_Question_ID_fk");
+            });
+
+            modelBuilder.Entity<PlayerRanking>(entity =>
+            {
+                entity.ToTable("PlayerRanking");
+
+                entity.HasIndex(e => e.PlayerId, "PlayerRanking_PlayerID_uindex")
+                    .IsUnique();
+
+                entity.Property(e => e.Id).HasColumnName("ID");
+
+                entity.Property(e => e.PlayerId).HasColumnName("PlayerID");
+
+                entity.HasOne(d => d.Player)
+                    .WithOne(p => p.PlayerRanking)
+                    .HasForeignKey<PlayerRanking>(d => d.PlayerId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("PlayerRanking_Player_ID_fk");
             });
 
             modelBuilder.Entity<Question>(entity =>
