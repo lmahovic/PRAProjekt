@@ -15,5 +15,7 @@ public class PraMappingProfile : Profile
             .ReverseMap();
         CreateMap<Answer, AnswerViewModel>()
             .ReverseMap();
+        CreateMap<PlayerQuestionAnswer, PlayerQuestionAnswerViewModel>()
+            .ReverseMap();
     }
 }

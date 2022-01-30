@@ -24,7 +24,7 @@ public class PlayersController : ControllerBase
         _context = context;
         _mapper = mapper;
     }
-
+    
     // GET: api/Players/5
     [HttpGet("{id:int}")]
     public async Task<ActionResult<Player>> GetPlayer(int id) => Ok(await _context.Players.FindAsync(id));
@@ -43,11 +43,27 @@ public class PlayersController : ControllerBase
             .Where(player => player.GameId == model.GameId)
             .Select(player => player.Nickname.ToUpper())
             .ToListAsync();
+        
+        // Production CODE
+        // **************
+        
+         // if (existingPlayersNicknames.Contains(model.Nickname.ToUpper()))
+         // {
+         //     return BadRequest("Player with the selected nickname already exists!");
+         // }
 
-        if (existingPlayersNicknames.Count != 0 && existingPlayersNicknames.Contains(model.Nickname.ToUpper()))
+        //@Todo test - makni 
+        //Test CODE
+        //**************
+
+        if (existingPlayersNicknames.Contains(model.Nickname.ToUpper()))
         {
-            return BadRequest("Player with the selected nickname already exists!");
+            var existing = await _context.Players.SingleAsync(x=>x.Nickname==model.Nickname.ToUpper());
+            return CreatedAtAction("GetPlayer", new {id = existing.Id}, _mapper.Map<PlayerViewModel>(existing));
         }
+        
+        
+        
 
         var player = _mapper.Map<Player>(model);
         try

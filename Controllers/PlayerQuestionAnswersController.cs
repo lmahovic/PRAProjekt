@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PRA_WebAPI.Context;
 using PRA_WebAPI.Entities;
+using PRA_WebAPI.ViewModels;
 
 namespace PRA_WebAPI.Controllers
 {
@@ -13,22 +16,41 @@ namespace PRA_WebAPI.Controllers
     public class PlayerQuestionAnswersController : ControllerBase
     {
         private readonly PRAQuizContext _context;
+        private readonly IMapper _mapper;
 
-        public PlayerQuestionAnswersController(PRAQuizContext context)
+        public PlayerQuestionAnswersController(PRAQuizContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        // // GET: api/PlayerQuestionAnswers
-        // [HttpGet]
-        // public async Task<ActionResult<IEnumerable<PlayerQuestionAnswer>>> GetPlayerQuestionAnswers()
-        // {
-        //     return await _context.PlayerQuestionAnswers.ToListAsync();
-        // }
-
+        //Check if all players have answered
         // GET: api/PlayerQuestionAnswers/5
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<bool>> GetPlayerQuestionAnswers([FromRoute] int id)
+        {
+            if (!PlayerQuestionAnswerExists(id))
+            {
+                return NotFound($"Player with the id {id} was not found!");
+            }
+
+            var playerQuestionAnswer = await _context.PlayerQuestionAnswers
+                .SingleAsync(x => x.Id == id);
+
+            await _context.Players.Where(x => x.Id == playerQuestionAnswer.PlayerId).LoadAsync();
+
+            return Ok(!await _context.PlayerQuestionAnswers
+                .Include(x => x.Player)
+                .AnyAsync(x =>
+                    x.QuestionId == playerQuestionAnswer.QuestionId &&
+                    x.Player.GameId == playerQuestionAnswer.Player.GameId &&
+                    x.Points == null));
+
+        }
+
+        // GET: api/PlayerQuestionAnswers?playerId=1&questionId=0
         [HttpGet]
-        public async Task<ActionResult<int>> GetPlayerQuestionAnswer(int playerId, int questionId)
+        public async Task<ActionResult<int>> GetPlayerQuestionAnswer([FromQuery] int playerId, [FromQuery] int questionId)
         {
             var playerQuestionAnswer = await _context.PlayerQuestionAnswers
                 .FirstOrDefaultAsync(answer =>
@@ -41,27 +63,28 @@ namespace PRA_WebAPI.Controllers
         // PUT: api/PlayerQuestionAnswers/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut]
-        public async Task<IActionResult> PutPlayerQuestionAnswer(int id, int answerId, long answerTime)
+        public async Task<ActionResult<int>> PutPlayerQuestionAnswer(PlayerQuestionAnswerViewModel playerQuestionAnswerViewModel)
         {
-            var playerQuestionAnswer = await _context.PlayerQuestionAnswers
-                .FindAsync(id);
 
-            if (playerQuestionAnswer == null)
+            if (!PlayerQuestionAnswerExists(playerQuestionAnswerViewModel.Id))
             {
                 return BadRequest("Player question not found");
             }
 
-            playerQuestionAnswer.AnswerId = answerId == 0 ? null : answerId;
-            playerQuestionAnswer.AnswerTime = answerTime;
+            var playerQuestionAnswer = await _context.PlayerQuestionAnswers
+                .SingleAsync(x => x.Id == playerQuestionAnswerViewModel.Id);
 
-            if (playerQuestionAnswer.AnswerId == null)
+            _mapper.Map(playerQuestionAnswerViewModel, playerQuestionAnswer);
+
+            if (playerQuestionAnswer.AnswerId == 0)
             {
                 playerQuestionAnswer.Points = 0;
+                playerQuestionAnswer.AnswerId = null;
             }
             else
             {
                 var answer = await _context.Answers
-                    .FindAsync(answerId);
+                    .FindAsync(playerQuestionAnswer.AnswerId);
 
                 if (answer == null)
                 {
@@ -73,7 +96,7 @@ namespace PRA_WebAPI.Controllers
                     var question = await _context.Questions
                         .FindAsync(answer.QuestionId);
 
-                    playerQuestionAnswer.Points = CalculatePoints(question, answerTime);
+                    playerQuestionAnswer.Points = CalculatePoints(question, playerQuestionAnswer.AnswerTime!.Value);
                 }
                 else
                 {
@@ -87,18 +110,18 @@ namespace PRA_WebAPI.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!PlayerQuestionAnswerExists(id))
+                if (!PlayerQuestionAnswerExists(playerQuestionAnswer.Id))
                 {
                     return NotFound();
                 }
             }
 
-            return Ok();
+            return Ok(playerQuestionAnswer.Points);
         }
         private static int CalculatePoints(Question question, long answerTime)
         {
             var answerTimeDouble = (double) answerTime;
-            return (int) (100 + 100 * (1 - answerTimeDouble / question.TimeLimit * 1000));
+            return (int) Math.Round(100 + 100 * (1 - answerTimeDouble / (question.TimeLimit * 1000)));
         }
 
         // // POST: api/PlayerQuestionAnswers
