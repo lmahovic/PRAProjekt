@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -33,11 +34,11 @@ namespace PRA_WebAPI.Controllers
         }
 
         // GET: api/PlayerRankings/5
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<PlayerRankingViewModel>> GetPlayerRanking(int id)
+        [HttpGet("{playerId:int}")]
+        public async Task<ActionResult<PlayerRankingViewModel>> GetPlayerRanking(int playerId)
         {
             var playerRanking = await _context.PlayerRankings
-                .FirstOrDefaultAsync(x=>x.PlayerId==id);
+                .FirstOrDefaultAsync(x => x.PlayerId == playerId);
 
             if (playerRanking == null)
             {
@@ -79,17 +80,65 @@ namespace PRA_WebAPI.Controllers
         //     return NoContent();
         // }
         //
-        // // POST: api/PlayerRankings
-        // // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        // [HttpPost]
-        // public async Task<ActionResult<PlayerRanking>> PostPlayerRanking(PlayerRanking playerRanking)
-        // {
-        //     _context.PlayerRankings.Add(playerRanking);
-        //     await _context.SaveChangesAsync();
-        //
-        //     return CreatedAtAction("GetPlayerRanking", new {id = playerRanking.Id}, playerRanking);
-        // }
-        //
+        // POST: api/PlayerRankings
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost("{gameId:int}")]
+        public async Task<IActionResult> PostPlayerRanking([FromRoute]int gameId)
+        {
+            var playerTotalScoreDictionary = await _context.PlayerQuestionAnswers
+                .Include(x => x.Player)
+                .Where(x => x.Player.GameId == gameId)
+                .GroupBy(x => x.PlayerId)
+                .Select(x =>
+                    new
+                    {
+                        playerId = x.Key,
+                        playerTotalScore =
+                            x.Sum(y => y.Points ?? 0)
+                    })
+                .OrderByDescending(x => x.playerTotalScore)
+                .ToDictionaryAsync(
+                    x=> x.playerId, 
+                    x=>x.playerTotalScore);
+
+            var lastRanking = 1;
+            var playerRankingList = new List<PlayerRanking>();
+            var playerTotalScoreDictionaryKeys = playerTotalScoreDictionary.Keys.ToList();
+            var playerTotalScoreDictionaryValues = playerTotalScoreDictionary.Values.ToList();
+            
+            for (var i = 0; i < playerTotalScoreDictionary.Count; i++)
+            {
+                var newPlayerRanking = new PlayerRanking
+                {
+                    PlayerId = playerTotalScoreDictionaryKeys[i],
+                    TotalPoints = playerTotalScoreDictionaryValues[i]
+                };
+
+                if (playerRankingList.Count == 0)
+                {
+                    newPlayerRanking.Ranking = 1;
+                }
+                else
+                {
+                    if (playerTotalScoreDictionaryValues[i] == playerTotalScoreDictionaryValues[i - 1])
+                    {
+                        newPlayerRanking.Ranking = lastRanking;
+                    }
+                    else
+                    {
+                        newPlayerRanking.Ranking = i + 1;
+                        lastRanking++;
+                    }
+                }
+                playerRankingList.Add(newPlayerRanking);
+            }
+
+            _context.PlayerRankings.AddRange(playerRankingList);
+            await _context.SaveChangesAsync();
+
+            return Ok($"Player rankings for game id {gameId} successfully created");
+        }
+
         // // DELETE: api/PlayerRankings/5
         // [HttpDelete("{id}")]
         // public async Task<IActionResult> DeletePlayerRanking(int id)
