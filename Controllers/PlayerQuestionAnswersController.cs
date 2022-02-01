@@ -143,7 +143,7 @@ namespace PRA_WebAPI.Controllers
         // POST: api/PlayerQuestionAnswers
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<PlayerQuestionAnswer>> PostPlayerQuestionAnswers(
+        public async Task<ActionResult<PlayerQuestionAnswerViewModel>> PostPlayerQuestionAnswers(
             [FromBody] IEnumerable<PlayerQuestionAnswerViewModel> playerQuestionAnswers)
         {
             try
@@ -160,6 +160,11 @@ namespace PRA_WebAPI.Controllers
                     .Distinct().Single();
 
                 var playerQuestionAnswerEntities = _mapper.Map<List<PlayerQuestionAnswer>>(playerQuestionAnswers);
+                
+                foreach (var playerQuestionAnswerEntity in playerQuestionAnswerEntities)
+                {
+                    
+                }
 
                 var existingPqa = await _context.PlayerQuestionAnswers.ToListAsync();
                 foreach (var playerQuestionAnswerEntity in playerQuestionAnswerEntities)
