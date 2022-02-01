@@ -24,10 +24,24 @@ public class PlayersController : ControllerBase
         _context = context;
         _mapper = mapper;
     }
-    
+
+    // GET: api/Players?gameId=x
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<PlayerViewModel>>> GetPlayersByQuiz([FromQuery] int gameId)
+    {
+        if (!_context.Games.Any(x => x.Id == gameId))
+        {
+            return BadRequest($"Game {gameId} does not exist!");
+        }
+        return Ok(_mapper.Map<IEnumerable<PlayerViewModel>>(await _context.Players
+            .Where(x => x.GameId == gameId)
+            .ToListAsync()));
+    }
+
     // GET: api/Players/5
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<Player>> GetPlayer(int id) => Ok(await _context.Players.FindAsync(id));
+    public async Task<ActionResult<PlayerViewModel>> GetPlayer(int id) =>
+        Ok(_mapper.Map<PlayerViewModel>(await _context.Players.FindAsync(id)));
 
     // POST: api/Players
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
@@ -43,14 +57,14 @@ public class PlayersController : ControllerBase
             .Where(player => player.GameId == model.GameId)
             .Select(player => player.Nickname.ToUpper())
             .ToListAsync();
-        
+
         // Production CODE
         // **************
-        
-         // if (existingPlayersNicknames.Contains(model.Nickname.ToUpper()))
-         // {
-         //     return BadRequest("Player with the selected nickname already exists!");
-         // }
+
+        // if (existingPlayersNicknames.Contains(model.Nickname.ToUpper()))
+        // {
+        //     return BadRequest("Player with the selected nickname already exists!");
+        // }
 
         //@Todo test - makni 
         //Test CODE
@@ -58,12 +72,10 @@ public class PlayersController : ControllerBase
 
         if (existingPlayersNicknames.Contains(model.Nickname.ToUpper()))
         {
-            var existing = await _context.Players.SingleAsync(x=>x.Nickname==model.Nickname.ToUpper());
+            var existing = await _context.Players.SingleAsync(x => x.Nickname == model.Nickname.ToUpper());
             return CreatedAtAction("GetPlayer", new {id = existing.Id}, _mapper.Map<PlayerViewModel>(existing));
         }
-        
-        
-        
+
 
         var player = _mapper.Map<Player>(model);
         try
@@ -90,7 +102,7 @@ public class PlayersController : ControllerBase
         }
 
         player.HasQuit = true;
-        
+
         try
         {
             await _context.SaveChangesAsync();
@@ -102,16 +114,15 @@ public class PlayersController : ControllerBase
                 return NotFound();
             }
         }
+
         return Ok();
     }
-    
-    
+
+
     private bool PlayerExists(int id)
     {
         return _context.Players.Any(e => e.Id == id);
     }
-
-
 
 
 }
