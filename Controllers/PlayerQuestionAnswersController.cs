@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,6 +25,20 @@ namespace PRA_WebAPI.Controllers
             _mapper = mapper;
         }
 
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<PlayerQuestionAnswerViewModel>>> GetPlayerQuestionAnswersByQuestion(
+            [FromQuery] int gameId, [FromQuery] int questionId)
+        {
+            var playerQuestionAnswers = await _context.PlayerQuestionAnswers
+                .Include(x => x.Player)
+                .Where(x =>
+                    x.Player.GameId == gameId &&
+                    x.QuestionId == questionId)
+                .ToListAsync();
+
+            return Ok(_mapper.Map<List<PlayerQuestionAnswerViewModel>>(playerQuestionAnswers));
+        }
+
         //Check if all players have answered
         // GET: api/PlayerQuestionAnswers/5
         [HttpGet("{id:int}")]
@@ -31,7 +46,7 @@ namespace PRA_WebAPI.Controllers
         {
             if (!PlayerQuestionAnswerExists(id))
             {
-                return NotFound($"Player with the id {id} was not found!");
+                return NotFound($"PlayerQuestionAnswer with the id {id} was not found!");
             }
 
             var playerQuestionAnswer = await _context.PlayerQuestionAnswers
@@ -44,14 +59,14 @@ namespace PRA_WebAPI.Controllers
                 .AnyAsync(x =>
                     x.QuestionId == playerQuestionAnswer.QuestionId &&
                     x.Player.GameId == playerQuestionAnswer.Player.GameId &&
-                    x.Player.HasQuit== false &&
+                    x.Player.HasQuit == false &&
                     x.Points == null));
 
         }
 
-        // GET: api/PlayerQuestionAnswers?playerId=1&questionId=0
-        [HttpGet]
-        public async Task<ActionResult<int>> GetPlayerQuestionAnswer([FromQuery] int playerId, [FromQuery] int questionId)
+        // GET: api/PlayerQuestionAnswers/1/0
+        [HttpGet("{playerId:int}/{questionId:int}")]
+        public async Task<ActionResult<int>> GetPlayerQuestionAnswer([FromRoute] int playerId, [FromRoute] int questionId)
         {
             var playerQuestionAnswer = await _context.PlayerQuestionAnswers
                 .FirstOrDefaultAsync(answer =>
@@ -125,33 +140,69 @@ namespace PRA_WebAPI.Controllers
             return (int) Math.Round(100 + 100 * (1 - answerTimeDouble / (question.TimeLimit * 1000)));
         }
 
-        // // POST: api/PlayerQuestionAnswers
-        // // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        // [HttpPost]
-        // public async Task<ActionResult<PlayerQuestionAnswer>> PostPlayerQuestionAnswer(PlayerQuestionAnswer playerQuestionAnswer)
-        // {
-        //     _context.PlayerQuestionAnswers.Add(playerQuestionAnswer);
-        //     await _context.SaveChangesAsync();
-        //
-        //     return CreatedAtAction("GetPlayerQuestionAnswer", new {id = playerQuestionAnswer.Id}, playerQuestionAnswer);
-        // }
-        //
-        // // DELETE: api/PlayerQuestionAnswers/5
-        // [HttpDelete("{id}")]
-        // public async Task<IActionResult> DeletePlayerQuestionAnswer(int id)
-        // {
-        //     var playerQuestionAnswer = await _context.PlayerQuestionAnswers.FindAsync(id);
-        //     if (playerQuestionAnswer == null)
-        //     {
-        //         return NotFound();
-        //     }
-        //
-        //     _context.PlayerQuestionAnswers.Remove(playerQuestionAnswer);
-        //     await _context.SaveChangesAsync();
-        //
-        //     return NoContent();
-        // }
-        //
+        // POST: api/PlayerQuestionAnswers
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost]
+        public async Task<ActionResult<PlayerQuestionAnswer>> PostPlayerQuestionAnswers(
+            [FromBody] IEnumerable<PlayerQuestionAnswerViewModel> playerQuestionAnswers)
+        {
+            try
+            {
+                var gameId = await _context.Players
+                    .Where(pqa => playerQuestionAnswers
+                        .Select(p => p.PlayerId)
+                        .Contains(pqa.Id))
+                    .Select(x => x.GameId)
+                    .Distinct()
+                    .SingleAsync();
+
+                var questionId = playerQuestionAnswers.Select(x => x.QuestionId)
+                    .Distinct().Single();
+
+                var playerQuestionAnswerEntities = _mapper.Map<List<PlayerQuestionAnswer>>(playerQuestionAnswers);
+
+                var existingPqa = await _context.PlayerQuestionAnswers.ToListAsync();
+                foreach (var playerQuestionAnswerEntity in playerQuestionAnswerEntities)
+                {
+                    playerQuestionAnswerEntity.Id = 0;
+                    if (existingPqa.Any(x =>
+                            x.PlayerId == playerQuestionAnswerEntity.PlayerId &&
+                            x.QuestionId == playerQuestionAnswerEntity.QuestionId))
+                    {
+                        return BadRequest(
+                            $"Player {playerQuestionAnswerEntity.PlayerId} already has a " +
+                            $"record for question {playerQuestionAnswerEntity.QuestionId}");
+                    }
+                }
+                _context.PlayerQuestionAnswers.AddRange(playerQuestionAnswerEntities);
+                await _context.SaveChangesAsync();
+                return CreatedAtAction(nameof(GetPlayerQuestionAnswersByQuestion),
+                    new {gameId, questionId},
+                    _mapper.Map<List<PlayerQuestionAnswerViewModel>>(playerQuestionAnswerEntities));
+            }
+            catch (Exception)
+            {
+                return BadRequest("Game id and question ids are not unique!");
+            }
+
+        }
+
+        // DELETE: api/PlayerQuestionAnswers/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletePlayerQuestionAnswer(int id)
+        {
+            var playerQuestionAnswer = await _context.PlayerQuestionAnswers.FindAsync(id);
+            if (playerQuestionAnswer == null)
+            {
+                return NotFound();
+            }
+
+            _context.PlayerQuestionAnswers.Remove(playerQuestionAnswer);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
         private bool PlayerQuestionAnswerExists(int id)
         {
             return _context.PlayerQuestionAnswers.Any(e => e.Id == id);
