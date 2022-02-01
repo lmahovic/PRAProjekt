@@ -19,5 +19,8 @@ public class PraMappingProfile : Profile
             .ReverseMap();
         CreateMap<PlayerRanking, PlayerRankingViewModel>()
             .ReverseMap();
+
+        CreateMap<Author, AuthorViewModel>().ReverseMap();
+        CreateMap<Quiz, QuizViewModel>().ReverseMap();
     }
 }
