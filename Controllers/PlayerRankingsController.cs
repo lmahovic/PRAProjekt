@@ -98,9 +98,10 @@ namespace PRA_WebAPI.Controllers
                     }
                 }
             }
+
             await _context.SaveChangesAsync();
 
-            return Ok("Rank list updated!");
+            return NoContent();
         }
         //
         // POST: api/PlayerRankings
@@ -115,10 +116,17 @@ namespace PRA_WebAPI.Controllers
                 return NotFound($"No records were found for gameId {gameId}!");
             }
 
-            var lastRanking = 1;
-            var playerRankingList = new List<PlayerRanking>();
+
             var playerTotalScoreDictionaryKeys = playerTotalScoreDictionary.Keys.ToList();
             var playerTotalScoreDictionaryValues = playerTotalScoreDictionary.Values.ToList();
+
+            if (await _context.PlayerRankings.AnyAsync(x => playerTotalScoreDictionaryKeys.Contains(x.PlayerId)))
+            {
+                return BadRequest("Cannot insert duplicate playerId!");
+            }
+
+            var lastRanking = 1;
+            var playerRankingList = new List<PlayerRanking>();
 
             for (var i = 0; i < playerTotalScoreDictionary.Count; i++)
             {
