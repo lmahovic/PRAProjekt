@@ -26,9 +26,8 @@ public class GamesController : ControllerBase
         _mapper = mapper;
     }
 
-    // GET: api/Games/5
-    [HttpGet("{gamePin}")]
-    public async Task<ActionResult<GameViewModel>> GetGame(string gamePin)
+    [HttpGet]
+    public async Task<ActionResult<GameViewModel>> GetGame([FromQuery] string gamePin)
     {
         var game = await _context.Games
             .FirstOrDefaultAsync(game =>
@@ -38,6 +37,22 @@ public class GamesController : ControllerBase
         if (game == null)
         {
             return BadRequest("Game pin not found!");
+        }
+
+        return Ok(_mapper.Map<GameViewModel>(game));
+    }
+
+    // GET: api/Games/5
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<GameViewModel>> GetGame(int id)
+    {
+        var game = await _context.Games
+            .FirstOrDefaultAsync(game =>
+                game.Id == id);
+
+        if (game == null)
+        {
+            return BadRequest($"Game with the id {id} was not found!");
         }
 
         return Ok(_mapper.Map<GameViewModel>(game));
@@ -74,9 +89,9 @@ public class GamesController : ControllerBase
         await _context.SaveChangesAsync();
         return CreatedAtAction(nameof(GetGame), new {gamePin = newGame.GamePin}, _mapper.Map<GameViewModel>(newGame));
     }
-    
+
     [HttpPut]
-    public async Task<IActionResult> PutFinishTime([FromQuery]int id)
+    public async Task<IActionResult> PutFinishTime([FromQuery] int id)
     {
         var game = await _context.Games
             .FindAsync(id);
@@ -88,7 +103,7 @@ public class GamesController : ControllerBase
 
         game.FinishTime = DateTime.Now;
         await _context.SaveChangesAsync();
-        return Ok("Finish time set");
+        return NoContent();
     }
 
     [HttpPut("{id:int}")]
@@ -104,7 +119,7 @@ public class GamesController : ControllerBase
 
         game.StartTime = DateTime.Now;
         await _context.SaveChangesAsync();
-        return Ok("Start time set");
+        return NoContent();
     }
 
     private static string GetNewRandomPin()
