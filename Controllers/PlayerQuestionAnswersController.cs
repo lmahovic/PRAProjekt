@@ -41,16 +41,16 @@ namespace PRA_WebAPI.Controllers
 
         //Check if all players have answered
         // GET: api/PlayerQuestionAnswers/5
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<bool>> GetPlayerQuestionAnswers([FromRoute] int id)
+        [HttpGet("{playerQuestionAnswerId:int}")]
+        public async Task<ActionResult<bool>> GetPlayerQuestionAnswers([FromRoute] int playerQuestionAnswerId)
         {
-            if (!PlayerQuestionAnswerExists(id))
+            if (!PlayerQuestionAnswerExists(playerQuestionAnswerId))
             {
-                return NotFound($"PlayerQuestionAnswer with the id {id} was not found!");
+                return NotFound($"PlayerQuestionAnswer with the id {playerQuestionAnswerId} was not found!");
             }
 
             var playerQuestionAnswer = await _context.PlayerQuestionAnswers
-                .SingleAsync(x => x.Id == id);
+                .SingleAsync(x => x.Id == playerQuestionAnswerId);
 
             await _context.Players.Where(x => x.Id == playerQuestionAnswer.PlayerId).LoadAsync();
 
